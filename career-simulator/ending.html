@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>结局 - 互联网大厂生存模拟器</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container" id="ending-content">
+        <div class="game-over">
+            <div id="ending-icon" style="font-size: 4rem; margin-bottom: 20px;">🏆</div>
+            <h1 id="ending-title">结局名称</h1>
+            <p class="subtitle" id="ending-desc">结局描述</p>
+        </div>
+        
+        <div class="review-grid">
+            <div class="review-item">
+                <div class="label">工作年限</div>
+                <div class="value" id="stat-years">0</div>
+            </div>
+            <div class="review-item">
+                <div class="label">最高职级</div>
+                <div class="value" id="stat-maxpos">实习生</div>
+            </div>
+            <div class="review-item">
+                <div class="label">最终存款</div>
+                <div class="value" id="stat-money">0</div>
+            </div>
+            <div class="review-item">
+                <div class="label">最终健康</div>
+                <div class="value" id="stat-health">0</div>
+            </div>
+            <div class="review-item">
+                <div class="label">能力值</div>
+                <div class="value" id="stat-ability">0</div>
+            </div>
+            <div class="review-item">
+                <div class="label">心态值</div>
+                <div class="value" id="stat-mind">0</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h2>重要决策</h2>
+            </div>
+            <div id="decisions-list">
+                <p class="empty">暂无记录</p>
+            </div>
+        </div>
+        
+        <div class="menu" style="margin-top: 20px;">
+            <button id="share-btn" class="btn btn-primary" onclick="generateShareImage()">生成分享图</button>
+            <button id="restart-btn" class="btn btn-secondary" onclick="restartGame()">再来一局</button>
+            <button id="ranking-btn" class="btn btn-secondary" onclick="showRanking()">查看排行榜</button>
+        </div>
+    </div>
+
+    <!-- 排行榜弹窗 -->
+    <div id="ranking-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🏆 人生排行榜</h2>
+                <span class="close" onclick="closeRanking()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="ranking-list">
+                    <p class="empty">暂无记录</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeRanking()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/share.js"></script>
+    <script src="js/modal.js"></script>
+    <script>
+        let gameState = null;
+        
+        function initEnding() {
+            gameState = loadGame();
+            if (!gameState || !gameState.finalEnding) {
+                showMessage('没有找到游戏记录', function() {
+                    location.href = 'index.html';
+                });
+                return;
+            }
+            
+            const ending = gameState.finalEnding;
+            
+            document.getElementById('ending-icon').textContent = ending.icon;
+            document.getElementById('ending-title').textContent = ending.name;
+            document.getElementById('ending-desc').textContent = ending.description;
+            
+            const yearsWorked = gameState.year - 1;
+            document.getElementById('stat-years').textContent = `${yearsWorked}年`;
+            document.getElementById('stat-maxpos').textContent = getPositionName(gameState.maxPosition);
+            document.getElementById('stat-money').textContent = `${gameState.stats.money}万`;
+            document.getElementById('stat-health').textContent = gameState.stats.health;
+            document.getElementById('stat-ability').textContent = gameState.stats.ability;
+            document.getElementById('stat-mind').textContent = gameState.stats.mind;
+            
+            displayDecisions();
+            
+            saveToRanking();
+            deleteSave();
+        }
+        
+        function displayDecisions() {
+            const decisions = gameState.decisions || [];
+            const decisionsList = document.getElementById('decisions-list');
+            
+            if (decisions.length === 0) {
+                decisionsList.innerHTML = '<p class="empty">暂无记录</p>';
+                return;
+            }
+            
+            const decisionCounts = {};
+            decisions.forEach(d => {
+                decisionCounts[d] = (decisionCounts[d] || 0) + 1;
+            });
+            
+            const decisionLabels = {
+                'focus_work': '专注工作',
+                'networking': '拓展人脉',
+                'rest': '注重休息',
+                'side_hustle': '发展副业',
+                'study': '学习新技术'
+            };
+            
+            decisionsList.innerHTML = Object.entries(decisionCounts).map(([id, count]) => `
+                <div style="padding: 10px; border-bottom: 1px solid #2a2a2a;">
+                    <span>${decisionLabels[id] || id}</span>
+                    <span style="float: right; color: #666;">${count}次</span>
+                </div>
+            `).join('');
+        }
+        
+        function saveToRanking() {
+            const record = {
+                nickname: `玩家${Date.now().toString().slice(-4)}`,
+                ending: gameState.finalEnding.name,
+                yearsWorked: gameState.year - 1,
+                maxPosition: getPositionName(gameState.maxPosition),
+                finalMoney: gameState.stats.money,
+                finalHealth: gameState.stats.health
+            };
+            saveRanking(record);
+        }
+        
+        function restartGame() {
+            deleteSave();
+            location.href = 'create.html';
+        }
+        
+        function generateShareImage() {
+            generateShareImageFunc();
+        }
+        
+        document.addEventListener('DOMContentLoaded', initEnding);
+    </script>
+</body>
+</html>
