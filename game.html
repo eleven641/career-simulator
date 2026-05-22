@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏中 - 互联网大厂生存模拟器</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="status-bar">
+            <div class="year">第${year}年 Q${quarter} | 年龄: ${age}</div>
+            <div class="company">${companyName}</div>
+            <div class="position">${positionName}</div>
+        </div>
+        
+        <div class="stats-grid" style="margin-top: 20px;">
+            <div class="stat-item">
+                <div class="label">能力</div>
+                <div class="value" id="stat-ability">0</div>
+                <div class="progress-bar">
+                    <div class="progress-fill ability" id="prog-ability"></div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="label">心态</div>
+                <div class="value" id="stat-mind">0</div>
+                <div class="progress-bar">
+                    <div class="progress-fill mind" id="prog-mind"></div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="label">人脉</div>
+                <div class="value" id="stat-connection">0</div>
+                <div class="progress-bar">
+                    <div class="progress-fill connection" id="prog-connection"></div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="label">存款(万)</div>
+                <div class="value" id="stat-money">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="label">健康</div>
+                <div class="value" id="stat-health">0</div>
+                <div class="progress-bar">
+                    <div class="progress-fill health" id="prog-health"></div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="label">996</div>
+                <div class="value" id="stat-996">0</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="prog-996"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="event-area">
+            <div id="decision-card" class="event-card">
+                <div class="event-title">季度决策</div>
+                <div class="event-desc">选择本季度的主要行动方向：</div>
+                <div class="choices" id="decision-choices"></div>
+            </div>
+            
+            <div id="event-card" class="event-card" style="display: none;">
+                <div class="event-title" id="event-title"></div>
+                <div class="event-desc" id="event-desc"></div>
+                <div class="choices" id="event-choices"></div>
+                <div id="result-container"></div>
+            </div>
+        </div>
+        
+        <div class="menu" style="margin-top: 20px;">
+            <button id="next-btn" class="btn btn-primary" onclick="handleNextQuarter()" disabled>下一季度</button>
+            <button id="save-btn" class="btn btn-secondary" onclick="saveAndQuit()">保存并退出</button>
+        </div>
+        
+        <div id="debug-panel" class="debug-panel" style="display: none;">
+            <h3>DEBUG INFO</h3>
+            <pre id="debug-content"></pre>
+        </div>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/modal.js"></script>
+    <script>
+        let gameState = null;
+        let currentPhase = 'decision';
+        let pendingEvents = [];
+        let choiceMade = false;
+        
+        function initGame() {
+            gameState = loadGame();
+            if (!gameState) {
+                showMessage('没有找到存档，请先创建角色', function() {
+                    location.href = 'index.html';
+                });
+                return;
+            }
+            
+            if (DEBUG_MODE) {
+                document.getElementById('debug-panel').style.display = 'block';
+            }
+            
+            updateUI();
+            showDecision();
+        }
+        
+        function updateUI() {
+            const posName = getPositionName(gameState.position);
+            const compName = getCompanyName(gameState.company);
+            
+            document.querySelector('.year').textContent = `第${gameState.year}年 Q${gameState.quarter} | 年龄: ${gameState.age}`;
+            document.querySelector('.company').textContent = compName;
+            document.querySelector('.position').textContent = posName;
+            
+            document.getElementById('stat-ability').textContent = gameState.stats.ability;
+            document.getElementById('stat-mind').textContent = gameState.stats.mind;
+            document.getElementById('stat-connection').textContent = gameState.stats.connection;
+            document.getElementById('stat-money').textContent = gameState.stats.money;
+            document.getElementById('stat-health').textContent = gameState.stats.health;
+            document.getElementById('stat-996').textContent = gameState.stats["996"];
+            
+            document.getElementById('prog-ability').style.width = gameState.stats.ability + '%';
+            document.getElementById('prog-mind').style.width = gameState.stats.mind + '%';
+            document.getElementById('prog-connection').style.width = gameState.stats.connection + '%';
+            document.getElementById('prog-health').style.width = gameState.stats.health + '%';
+            document.getElementById('prog-996').style.width = gameState.stats["996"] + '%';
+            
+            if (DEBUG_MODE) {
+                document.getElementById('debug-content').textContent = JSON.stringify(gameState, null, 2);
+            }
+        }
+        
+        function showDecision() {
+            currentPhase = 'decision';
+            choiceMade = false;
+            document.getElementById('decision-card').style.display = 'block';
+            document.getElementById('event-card').style.display = 'none';
+            document.getElementById('next-btn').disabled = true;
+            
+            const availableDecisions = QUARTERLY_DECISIONS.filter(decision => {
+                if (!decision.condition) return true;
+                return decision.condition(gameState.stats, gameState.year, gameState.position);
+            });
+            
+            const shuffled = availableDecisions.sort(() => Math.random() - 0.5);
+            const selected = shuffled.slice(0, 5);
+            
+            const choicesContainer = document.getElementById('decision-choices');
+            choicesContainer.innerHTML = selected.map((decision) => `
+                <button class="choice-btn" onclick="makeDecisionByIndex(${QUARTERLY_DECISIONS.indexOf(decision)})">${decision.text}</button>
+            `).join('');
+        }
+        
+        function makeDecisionByIndex(index) {
+            if (choiceMade) return;
+            choiceMade = true;
+            
+            const decision = QUARTERLY_DECISIONS[index];
+            gameState.decisions.push(decision.id);
+            
+            const changes = applyEffects(gameState.stats, decision.effects);
+            
+            if (decision.risk && Math.random() < decision.risk) {
+                const riskChanges = applyEffects(gameState.stats, decision.riskEffect);
+                Object.assign(changes, riskChanges);
+            }
+            
+            showChanges(changes);
+            
+            document.getElementById('decision-card').style.display = 'none';
+            
+            pendingEvents = getRandomEvents(gameState, Math.random() > 0.5 ? 2 : 1);
+            
+            if (pendingEvents.length > 0) {
+                showEvent(pendingEvents[0]);
+            } else {
+                finishQuarter();
+            }
+        }
+        
+        function showEvent(event) {
+            currentPhase = 'event';
+            choiceMade = false;
+            
+            document.getElementById('event-card').style.display = 'block';
+            document.getElementById('event-title').textContent = event.title;
+            document.getElementById('event-desc').textContent = event.description;
+            document.getElementById('result-container').innerHTML = '';
+            
+            const choicesContainer = document.getElementById('event-choices');
+            choicesContainer.innerHTML = event.choices.map((choice, index) => `
+                <button class="choice-btn" onclick="makeEventChoice(${index})">${choice.text}</button>
+            `).join('');
+        }
+        
+        function makeEventChoice(index) {
+            if (choiceMade) return;
+            choiceMade = true;
+            
+            const currentEvent = pendingEvents[0];
+            const choice = currentEvent.choices[index];
+            
+            let resultText = '';
+            let resultClass = 'success';
+            
+            if (choice.risk && Math.random() < choice.risk) {
+                applyEffects(gameState.stats, choice.riskEffect);
+                resultText = choice.riskText || '运气不佳...';
+                resultClass = 'danger';
+            } else {
+                applyEffects(gameState.stats, choice.effects);
+                resultText = choice.successText || '事情顺利解决';
+                resultClass = 'success';
+            }
+            
+            showChanges(choice.effects);
+            
+            document.getElementById('result-container').innerHTML = `
+                <div class="result-text ${resultClass}">${resultText}</div>
+            `;
+            
+            pendingEvents.shift();
+            
+            if (pendingEvents.length > 0) {
+                setTimeout(() => {
+                    showEvent(pendingEvents[0]);
+                }, 1500);
+            } else {
+                setTimeout(() => {
+                    finishQuarter();
+                }, 1500);
+            }
+        }
+        
+        function showChanges(changes) {
+            for (const key in changes) {
+                if (changes.hasOwnProperty(key)) {
+                    const value = changes[key];
+                    if (value !== 0) {
+                        const element = document.getElementById(`stat-${key}`);
+                        if (element) {
+                            const float = document.createElement('span');
+                            float.className = `float-number ${value > 0 ? 'positive' : 'negative'}`;
+                            float.textContent = (value > 0 ? '+' : '') + value;
+                            float.style.left = element.offsetLeft + 'px';
+                            float.style.top = element.offsetTop + 'px';
+                            document.body.appendChild(float);
+                            
+                            setTimeout(() => {
+                                float.remove();
+                            }, 1000);
+                        }
+                    }
+                }
+            }
+        }
+        
+        function finishQuarter() {
+            applyPersonalityEffects(gameState);
+            const deathResult = apply996Effects(gameState);
+            
+            gameState.mindHistory.push(gameState.stats.mind);
+            
+            const ending = checkEnding(gameState);
+            if (ending) {
+                goToEnding(ending);
+                return;
+            }
+            
+            if (deathResult === 'sudden_death') {
+                const deathEnding = ENDINGS.find(e => e.id === 'ending_death');
+                goToEnding(deathEnding);
+                return;
+            }
+            
+            document.getElementById('event-card').style.display = 'none';
+            document.getElementById('next-btn').disabled = false;
+        }
+        
+        function handleNextQuarter() {
+            const result = advanceQuarter(gameState);
+            
+            if (result.type === 'ending') {
+                goToEnding(result.ending);
+            } else if (result.type === 'layoff') {
+                showMessage('你被毕业了！获得N+1补偿', function() {
+                    updateUI();
+                    showDecision();
+                });
+            } else {
+                updateUI();
+                showDecision();
+            }
+            
+            saveGame(gameState);
+        }
+        
+        function saveAndQuit() {
+            saveGame(gameState);
+            location.href = 'index.html';
+        }
+        
+        function goToEnding(ending) {
+            saveGame({
+                ...gameState,
+                finalEnding: ending
+            });
+            location.href = 'ending.html';
+        }
+        
+        document.addEventListener('DOMContentLoaded', initGame);
+    </script>
+</body>
+</html>

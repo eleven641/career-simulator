@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>互联网大厂生存模拟器</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>互联网大厂生存模拟器</h1>
+            <p class="subtitle">INTERNET FACTORY SURVIVAL SIMULATOR</p>
+        </header>
+        
+        <main>
+            <div class="menu">
+                <button id="start-btn" class="btn btn-primary" onclick="location.href='create.html'">开始新游戏</button>
+                <button id="continue-btn" class="btn btn-secondary" onclick="location.href='game.html'" style="display: none;">继续游戏</button>
+                <button id="ranking-btn" class="btn btn-secondary" onclick="showRanking()">人生排行榜</button>
+            </div>
+        </main>
+        
+        <footer>
+            <p>本游戏纯属虚构，如有雷同，你懂的</p>
+        </footer>
+    </div>
+
+    <!-- 排行榜弹窗 -->
+    <div id="ranking-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🏆 人生排行榜</h2>
+                <span class="close" onclick="closeRanking()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="ranking-list">
+                    <p class="empty">暂无记录</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeRanking()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/storage.js"></script>
+    <script src="js/game.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const save = loadGame();
+            if (save) {
+                document.getElementById('continue-btn').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

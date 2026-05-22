@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>创建角色 - 互联网大厂生存模拟器</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>创建角色</h1>
+            <p class="subtitle">SELECT YOUR BACKGROUND</p>
+        </header>
+        
+        <main>
+            <div class="card">
+                <div class="card-header">
+                    <h2>背景选择</h2>
+                </div>
+                
+                <form id="create-form">
+                    <div class="form-group">
+                        <label for="education">学历</label>
+                        <select id="education" required>
+                            <option value="">请选择学历</option>
+                            <option value="erben">二本</option>
+                            <option value="yiben">双非一本</option>
+                            <option value="211">211</option>
+                            <option value="985">985</option>
+                            <option value="haigui">海归</option>
+                            <option value="peixun">培训班转码</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="major">专业</label>
+                        <select id="major" required>
+                            <option value="">请选择专业</option>
+                            <option value="cs">计算机</option>
+                            <option value="se">软件工程</option>
+                            <option value="ee">电子信息</option>
+                            <option value="bio">生化环材转码</option>
+                            <option value="arts">文科转码</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="personality">性格</label>
+                        <select id="personality" required>
+                            <option value="">请选择性格</option>
+                            <option value="juanwang">卷王</option>
+                            <option value="moyu">摸鱼党</option>
+                            <option value="shekong">社恐</option>
+                            <option value="sheniu">社牛</option>
+                            <option value="foxi">佛系</option>
+                            <option value="fenqing">愤青</option>
+                            <option value="fendoubi">奋斗逼</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="company">入职公司</label>
+                        <select id="company" required>
+                            <option value="">请选择公司</option>
+                            <option value="small">小厂(50人)</option>
+                            <option value="medium">中厂(500人)</option>
+                            <option value="big">大厂(5万人)</option>
+                            <option value="outsourcing">外包</option>
+                            <option value="state">国企IT部</option>
+                            <option value="startup">创业公司(20人)</option>
+                        </select>
+                    </div>
+                    
+                    <button type="button" id="generate-btn" class="btn btn-primary" onclick="generateCharacter()">生成角色</button>
+                </form>
+            </div>
+            
+            <div id="stats-preview" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>角色属性</h2>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="label">能力值</div>
+                            <div class="value" id="stat-ability">0</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill ability" id="prog-ability"></div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="label">心态值</div>
+                            <div class="value" id="stat-mind">0</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill mind" id="prog-mind"></div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="label">人脉值</div>
+                            <div class="value" id="stat-connection">0</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill connection" id="prog-connection"></div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="label">存款(万)</div>
+                            <div class="value" id="stat-money">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="label">健康值</div>
+                            <div class="value" id="stat-health">0</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill health" id="prog-health"></div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="label">996指数</div>
+                            <div class="value" id="stat-996">0</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="prog-996"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 20px; text-align: center;">
+                        <button id="confirm-btn" class="btn btn-primary" onclick="startGame()">确认入职</button>
+                        <button id="regenerate-btn" class="btn btn-secondary" onclick="generateCharacter()">重新生成</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>本游戏纯属虚构，如有雷同，你懂的</p>
+        </footer>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/modal.js"></script>
+    <script>
+        function generateCharacter() {
+            const education = document.getElementById('education').value;
+            const major = document.getElementById('major').value;
+            const personality = document.getElementById('personality').value;
+            const company = document.getElementById('company').value;
+            
+            if (!education || !major || !personality || !company) {
+                showMessage('请填写所有选项');
+                return;
+            }
+            
+            const stats = generateInitialStats(education, major, personality, company);
+            
+            document.getElementById('stat-ability').textContent = stats.ability;
+            document.getElementById('stat-mind').textContent = stats.mind;
+            document.getElementById('stat-connection').textContent = stats.connection;
+            document.getElementById('stat-money').textContent = stats.money;
+            document.getElementById('stat-health').textContent = stats.health;
+            document.getElementById('stat-996').textContent = stats["996"];
+            
+            document.getElementById('prog-ability').style.width = stats.ability + '%';
+            document.getElementById('prog-mind').style.width = stats.mind + '%';
+            document.getElementById('prog-connection').style.width = stats.connection + '%';
+            document.getElementById('prog-health').style.width = stats.health + '%';
+            document.getElementById('prog-996').style.width = stats["996"] + '%';
+            
+            document.getElementById('stats-preview').style.display = 'block';
+            document.getElementById('generate-btn').style.display = 'none';
+        }
+        
+        async function startGame() {
+            const education = document.getElementById('education').value;
+            const major = document.getElementById('major').value;
+            const personality = document.getElementById('personality').value;
+            const company = document.getElementById('company').value;
+            
+            const stats = generateInitialStats(education, major, personality, company);
+            
+            const save = loadGame();
+            if (save) {
+                const confirmed = await showConfirm('已有存档，确定要覆盖吗？');
+                if (!confirmed) {
+                    return;
+                }
+            }
+            
+            const gameState = {
+                year: 1,
+                quarter: 1,
+                age: 22,
+                position: 'intern',
+                company: company,
+                education: education,
+                major: major,
+                personality: personality,
+                stats: stats,
+                performance: 0,
+                performanceHistory: [],
+                decisions: [],
+                mindHistory: [],
+                maxPosition: 'intern',
+                eventsCompleted: []
+            };
+            
+            saveGame(gameState);
+            location.href = 'game.html';
+        }
+    </script>
+</body>
+</html>
